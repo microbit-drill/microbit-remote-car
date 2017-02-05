@@ -20,6 +20,10 @@ let updateScreen = 0
 let driveDirection = 0
 let lastDriveDirection = 0
 let controlDirection = 0
+let P0 = 0
+let P16 = 0
+let P8 = 0
+let P12 = 0
 
 mode = standbyBit
 updateScreen = 1
@@ -54,37 +58,27 @@ radio.onDataReceived(() => {
     driveDirection = radio.receiveNumber()
 
     if (mode === remoteBit) {
+        P0 = 0
+        P16 = 0
+        P8 = 0
+        P12 = 0
         if (driveDirection === stopped) {
-            pins.digitalWritePin(DigitalPin.P0, 0)
-            pins.digitalWritePin(DigitalPin.P16, 0)
-            pins.digitalWritePin(DigitalPin.P8, 0)
-            pins.digitalWritePin(DigitalPin.P12, 0)
         } else if (driveDirection === forward) {
-            pins.digitalWritePin(DigitalPin.P0, 0)
-            pins.digitalWritePin(DigitalPin.P16, 1)
-            pins.digitalWritePin(DigitalPin.P8, 0)
-            pins.digitalWritePin(DigitalPin.P12, 1)
+            P16 = 1
+            P12 = 1
         } else if (driveDirection === right) {
-            pins.digitalWritePin(DigitalPin.P0, 0)
-            pins.digitalWritePin(DigitalPin.P16, 1)
-            pins.digitalWritePin(DigitalPin.P8, 0)
-            pins.digitalWritePin(DigitalPin.P12, 0)
+            P16 = 1
         } else if (driveDirection === backward) {
-            pins.digitalWritePin(DigitalPin.P0, 1)
-            pins.digitalWritePin(DigitalPin.P16, 0)
-            pins.digitalWritePin(DigitalPin.P8, 1)
-            pins.digitalWritePin(DigitalPin.P12, 0)
+            P0 = 1
+            P8 = 1
         } else if (driveDirection === left) {
-            pins.digitalWritePin(DigitalPin.P0, 0)
-            pins.digitalWritePin(DigitalPin.P16, 0)
-            pins.digitalWritePin(DigitalPin.P8, 0)
-            pins.digitalWritePin(DigitalPin.P12, 1)
+            P12 = 1
         } else if (driveDirection === standby) {
-            pins.digitalWritePin(DigitalPin.P0, 0)
-            pins.digitalWritePin(DigitalPin.P16, 0)
-            pins.digitalWritePin(DigitalPin.P8, 0)
-            pins.digitalWritePin(DigitalPin.P12, 0)
         }
+        pins.digitalWritePin(DigitalPin.P0, P0)
+        pins.digitalWritePin(DigitalPin.P16, P16)
+        pins.digitalWritePin(DigitalPin.P8, P8)
+        pins.digitalWritePin(DigitalPin.P12, P12)
     } else if (mode === controlBit) {
         // do nothing
     }
@@ -102,7 +96,7 @@ basic.forever(() => {
     zSpeed = input.acceleration(Dimension.Z);
 
     lastDirection = direction;
-    
+
     // not tested IRL
     if (ySpeed < -testSpeed) {
         direction = forward
@@ -112,15 +106,15 @@ basic.forever(() => {
         direction = backward;
     } else if (xSpeed < -testSpeed) {
         direction = left
-    } else  {
+    } else {
         direction = 0;
     }
 
     // not tested IRL
-    if (mode === controlBit){
-        if ( zSpeed > testSpeed) {
+    if (mode === controlBit) {
+        if (zSpeed > testSpeed) {
             direction = forward
-        }else if ( zSpeed < -testSpeed){
+        } else if (zSpeed < -testSpeed) {
             direction = stopped
         }
     }
