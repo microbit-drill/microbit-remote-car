@@ -1,21 +1,21 @@
 let xSpeed = 0
 let ySpeed = 0
 let zSpeed = 0
-let testSpeed = 300
+let testSpeed = 0
 let mode = 0
 let direction = 0
 let lastDirection = 0
 // basic but could be with movement ne and nv, ie up to many directions
 let stopped = 0
-let forward = 1
-let right = 2
-let backward = 3
-let left = 4
-let standby = 5
-let mode = 0
+let forward = 0
+let right = 0
+let backward = 0
+let left = 0
+let standby = 0
 let standbyBit = 0
-let remoteBit = 1
-let controlBit = 2
+let remoteBit = 0
+let controlBit = 0
+let setRemoteBit = 0
 let updateScreen = 0
 let driveDirection = 0
 let lastDriveDirection = 0
@@ -24,40 +24,39 @@ let P0 = 0
 let P16 = 0
 let P8 = 0
 let P12 = 0
-
-mode = standbyBit
-updateScreen = 1
-direction = 0
-lastDirection = direction
+let radioReceived = 0
 
 input.onButtonPressed(Button.A, () => {
-    // Sets micro:bit in remote control mode 
-    // Press A one the micro:bit you use to control the car
+    // change to left    
     mode = remoteBit
 })
 
 input.onButtonPressed(Button.B, () => {
-    // Sets micro:bit in car control mode.
-    // press B on the micro:bit placed in the buggy
-    // z movement stops and starts buggy
+    // change to right
     mode = controlBit
 })
 
 input.onButtonPressed(Button.AB, () => {
-    // Enter standby mode. 
-    // to avoid the car driving while waiving the controller around. 
-    // After pressing A+B you have to reconfigure the micro:bit's as described above.
-    // pressing on either bit causes standby
-    mode = standbyBit
-    radio.sendNumber(standby) // this resets both bits
+    if ( mode === standbyBit){
+        mode = controlBit;
+        radio.sendNumber(setRemoteBit)
+    } else {
+        mode = standbyBit
+        radio.sendNumber(standby)
+    }
     updateScreen = 1
 })
 
 radio.onDataReceived(() => {
+    radioReceived = radio.receiveNumber()
     lastDriveDirection = driveDirection
-    driveDirection = radio.receiveNumber()
 
-    if (mode === remoteBit) {
+    if (radioReceived === standby){
+        mode = standbyBit
+    } else if ( radioReceived === setRemoteBit){
+        mode = remoteBit
+    } else if (mode === remoteBit) {
+        driveDirection = radioReceived
         P0 = 0
         P16 = 0
         P8 = 0
@@ -73,8 +72,7 @@ radio.onDataReceived(() => {
             P8 = 1
         } else if (driveDirection === left) {
             P12 = 1
-        } else if (driveDirection === standby) {
-        }
+        } 
         pins.digitalWritePin(DigitalPin.P0, P0)
         pins.digitalWritePin(DigitalPin.P16, P16)
         pins.digitalWritePin(DigitalPin.P8, P8)
@@ -82,56 +80,61 @@ radio.onDataReceived(() => {
     } else if (mode === controlBit) {
         // do nothing
     }
-    if (driveDirection === standby) {
-        mode = standby
-    }
+
     if (driveDirection !== lastDriveDirection) {
         updateScreen = 1
     }
 })
 
 basic.forever(() => {
-    xSpeed = input.acceleration(Dimension.X);
-    ySpeed = input.acceleration(Dimension.Y);
-    zSpeed = input.acceleration(Dimension.Z);
+    if (mode === standbyBit) {
+        updateScreen = 1
+    }else{
+        xSpeed = input.acceleration(Dimension.X);
+        ySpeed = input.acceleration(Dimension.Y);
+        zSpeed = input.acceleration(Dimension.Z);
 
-    lastDirection = direction;
+        lastDirection = direction;
 
-    // not tested IRL
-    if (ySpeed < -testSpeed) {
-        direction = forward
-    } else if (xSpeed > testSpeed) {
-        direction = right
-    } else if (ySpeed > testSpeed) {
-        direction = backward;
-    } else if (xSpeed < -testSpeed) {
-        direction = left
-    } else {
-        direction = 0;
-    }
-
-    // not tested IRL
-    if (mode === controlBit) {
-        if (zSpeed > testSpeed) {
+        // not tested IRL
+        if (ySpeed < -testSpeed) {
             direction = forward
-        } else if (zSpeed < -testSpeed) {
-            direction = stopped
+        } else if (xSpeed > testSpeed) {
+            direction = right
+        } else if (ySpeed > testSpeed) {
+            direction = backward;
+        } else if (xSpeed < -testSpeed) {
+            direction = left
+        } else {
+            direction = stopped;
         }
-    }
 
-    radio.sendNumber(direction)
-
-    if (direction !== lastDirection) {
-        updateScreen = 1;
+        // not tested IRL
+        if (mode === controlBit) {
+            if (zSpeed > testSpeed) {
+                direction = forward
+            } else if (zSpeed < -testSpeed) {
+                direction = stopped
+            }
+        }
+        radio.sendNumber(direction)
     }
 
     if (updateScreen == 1) {
         updateScreen = 0
-        if (direction === stopped) {
+        if (mode === standbyBit) {
+            basic.showLeds(`
+                    . . # . .
+                    . # . # .
+                    # # # # #
+                    . # . # .
+                    . . # . .
+                    `)
+        }else if (direction === stopped) {
             basic.showLeds(`
                     . # # # .
                     # . . . #
-                    # . . . #
+                    # # # # #
                     # . . . #
                     . # # # .
                     `)
@@ -167,16 +170,24 @@ basic.forever(() => {
                     . # . . .
                     . . # . .
                     `)
-        } else if (direction === standby) {
-            basic.showLeds(`
-                    . . # . .
-                    . # . # .
-                    # # # # #
-                    . # . # .
-                    . . # . .
-                    `)
         }
         basic.pause(10); // if necessary
     }
-}
-)
+})
+
+testSpeed = 300
+forward = 1
+right = 2
+backward = 3
+left = 4
+standby = 5
+setRemoteBit = 6
+remoteBit = 1
+controlBit = 2
+
+mode = standbyBit
+updateScreen = 1
+direction = standby
+lastDirection = standby
+radio.sendNumber(standby) // this resets both bits
+
