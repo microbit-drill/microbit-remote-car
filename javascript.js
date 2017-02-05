@@ -173,7 +173,7 @@ basic.forever(() => {
                     . # . . .
                     . . # . .
                     `)
-        } else if (direction = standby) {
+        } else if (direction === standby) {
             basic.showLeds(`
                     . . # . .
                     . # . # .
